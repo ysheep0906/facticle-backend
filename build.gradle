@@ -31,8 +31,10 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.boot:spring-boot-devtools'
-	implementation 'com.azure:azure-storage-blob:12.20.0' // azure blob storage 접근을 위해 추가
 	implementation 'io.github.cdimascio:java-dotenv:5.2.2' //.env 파일 자동 로드를 위해 추가
+
+	//aws s3 연동을 위한 라이브러리
+	implementation 'software.amazon.awssdk:s3'
 
 	//elasticsearch 연동을 위한 라이브러리
 	implementation 'org.springframework.boot:spring-boot-starter-data-elasticsearch'

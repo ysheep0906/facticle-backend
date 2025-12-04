@@ -1,7 +1,10 @@
 package com.example.facticle.user.service;
 
-import com.azure.storage.blob.BlobClient;
-import com.azure.storage.blob.BlobContainerClient;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.core.sync.RequestBody;
+import org.springframework.beans.factory.annotation.Value;
 import com.example.facticle.common.authority.JwtTokenProvider;
 import com.example.facticle.common.authority.TokenInfo;
 import com.example.facticle.common.authority.TokenValidationResult;
@@ -47,9 +50,14 @@ public class UserService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final SocialAuthProviderFactory socialAuthProviderFactory;
 
-    //Azure 설정 및 사진 규격
-    private final BlobContainerClient blobContainerClient;
-    private static final String DEFAULT_PROFILE_IMAGE_URL = "https://facticlefilestorage.blob.core.windows.net/profile-images/default.png"; //기본 프로필 이미지 URL
+    //S3 연동
+    private final S3Client s3Client;
+    @Value("${aws.s3.bucket}")
+    private String bucketName;
+
+    @Value("${app.s3.default-profile}")
+    private String defaultProfileImageUrl;
+
     private static final List<String> ALLOWED_FILE_TYPES = List.of("image/jpeg", "image/png");
     private static final long MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB 제한
 
@@ -244,52 +252,61 @@ public class UserService {
      * 프로필 사진 업로드
      */
     public String uploadProfileImage(Long userId, MultipartFile profileImage) {
-        //사진 검증
-        if(profileImage == null || profileImage.isEmpty()){
-            throw new InvalidInputException("Invalid input", Map.of("profile_image", "profileImage is empty"));
-        }
-        if(!ALLOWED_FILE_TYPES.contains(profileImage.getContentType())){
-            throw new InvalidInputException("Invalid input", Map.of("profile_image", "Invalid profileImage format. Only JPG and PNG are allowed."));
-        }
-        if (profileImage.getSize() > MAX_FILE_SIZE) {
-            throw new InvalidInputException("Invalid input", Map.of("profile_image", "File size exceeds 5MB limit."));
-        }
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-
-        if (user.getProfileImage() != null && !user.getProfileImage().equals(DEFAULT_PROFILE_IMAGE_URL)) {
-
-            String oldFileName = user.getProfileImage().substring(user.getProfileImage().lastIndexOf("/") + 1);
-            if(blobContainerClient.getBlobClient(oldFileName).exists()){
-                blobContainerClient.getBlobClient(oldFileName).delete();
-            }
-        }
-
-        //새로운 사진 이름 지정
-        String fileExtension = "";
-        int lastDotIndex = profileImage.getOriginalFilename().lastIndexOf(".");
-        if(lastDotIndex != -1){
-            fileExtension = profileImage.getOriginalFilename().substring(lastDotIndex);
-        }
-        String newFileName = UUID.randomUUID() + "_" + userId + fileExtension;
-
-        try {
-            // Azure Blob Storage에 업로드
-            BlobClient blobClient = blobContainerClient.getBlobClient(newFileName);
-            blobClient.upload(profileImage.getInputStream(), profileImage.getSize(), true);
-
-            // 업로드된 이미지 URL
-            String imageUrl = blobClient.getBlobUrl();
-
-            // 사용자 프로필 이미지 업데이트
-            user.updateProfileImage(imageUrl);
-
-            return imageUrl;
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+    // Validation
+    if (profileImage == null || profileImage.isEmpty()) {
+        throw new InvalidInputException("Invalid input", Map.of("profile_image", "profileImage is empty"));
     }
+    if (!ALLOWED_FILE_TYPES.contains(profileImage.getContentType())) {
+        throw new InvalidInputException("Invalid input", Map.of("profile_image", "Only JPG and PNG allowed"));
+    }
+    if (profileImage.getSize() > MAX_FILE_SIZE) {
+        throw new InvalidInputException("Invalid input", Map.of("profile_image", "File size exceeds 5MB limit"));
+    }
+
+    User user = userRepository.findById(userId)
+            .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+    // 이전 이미지 삭제
+    if (user.getProfileImage() != null && !user.getProfileImage().equals(defaultProfileImageUrl)) {
+        String oldFileName = user.getProfileImage()
+                .substring(user.getProfileImage().lastIndexOf("/") + 1);
+
+        s3Client.deleteObject(DeleteObjectRequest.builder()
+                .bucket(bucketName)
+                .key(oldFileName)
+                .build());
+    }
+
+    // 새 파일 이름 생성
+    String extension = "";
+    int idx = profileImage.getOriginalFilename().lastIndexOf(".");
+    if (idx != -1) {
+        extension = profileImage.getOriginalFilename().substring(idx);
+    }
+    String newFileName = UUID.randomUUID() + "_" + userId + extension;
+
+    // S3 업로드
+    try {
+        s3Client.putObject(
+                PutObjectRequest.builder()
+                        .bucket(bucketName)
+                        .key(newFileName)
+                        .contentType(profileImage.getContentType())
+                        .build(),
+                RequestBody.fromInputStream(profileImage.getInputStream(), profileImage.getSize())
+        );
+
+        String imageUrl = "https://" + bucketName + ".s3.ap-northeast-2.amazonaws.com/" + newFileName;
+
+        user.updateProfileImage(imageUrl);
+
+        return imageUrl;
+
+    } catch (IOException e) {
+        throw new RuntimeException("Failed to upload image", e);
+    }
+}
 
     /**
      * 프로필 이미지 조회
@@ -304,24 +321,24 @@ public class UserService {
      * 프로필 이미지 삭제
      */
     public String deleteProfileImage(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+    User user = userRepository.findById(userId)
+            .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
-        String currentImage = user.getProfileImage();
+    String currentImage = user.getProfileImage();
 
-        if(currentImage != null && !currentImage.contains(DEFAULT_PROFILE_IMAGE_URL)){
+    if (currentImage != null && !currentImage.equals(defaultProfileImageUrl)) {
+        String oldFileName = currentImage.substring(currentImage.lastIndexOf("/") + 1);
 
-            String oldFileName = user.getProfileImage().substring(user.getProfileImage().lastIndexOf("/") + 1);
-            BlobClient blobClient = blobContainerClient.getBlobClient(oldFileName);
-            if (blobClient.exists()) {
-                blobClient.delete();
-            }
-        }
-
-        user.updateProfileImage(DEFAULT_PROFILE_IMAGE_URL);
-
-        return user.getProfileImage();
+        s3Client.deleteObject(DeleteObjectRequest.builder()
+                .bucket(bucketName)
+                .key(oldFileName)
+                .build());
     }
+
+    user.updateProfileImage(defaultProfileImageUrl);
+
+    return defaultProfileImageUrl;
+}
 
     /**
      * 회원 정보 조회
