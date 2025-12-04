@@ -1,5 +1,5 @@
 # Step 1: JDK 17 이미지 사용
-FROM openjdk:17-jdk-slim AS builder
+FROM eclipse-temurin:17-jdk-jammy AS builder
 
 # Step 2: 작업 디렉토리 생성
 WORKDIR /app
@@ -15,7 +15,7 @@ COPY src src
 RUN chmod +x ./gradlew && ./gradlew build -x test
 
 # Step 5: 실행용 이미지 생성
-FROM openjdk:17-jdk-slim
+FROM eclipse-temurin:17-jdk-jammy
 WORKDIR /app
 
 # Step 6: 빌드된 JAR 파일 복사
