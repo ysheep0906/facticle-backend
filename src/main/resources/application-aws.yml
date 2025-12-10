@@ -38,8 +38,6 @@ cloud:
 
 opensearch:
   endpoint: ${OPENSEARCH_ENDPOINT}
-  username: ${OPENSEARCH_USER}
-  password: ${OPENSEARCH_PASSWORD}
 
 oauth:
   google:
