@@ -5,7 +5,7 @@ spring:
   data:
     elasticsearch:
       repositories:
-        enabled: false
+        enabled: true
 
   datasource:
     url: jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}?serverTimezone=UTC&characterEncoding=UTF-8
