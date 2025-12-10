@@ -36,25 +36,23 @@ jobs:
       run: |
         docker push ${{ secrets.AWS_ECR_REGISTRY }}/${{ github.event.repository.name }}:latest
 
-    # # 6. Checkout GitOps repo
-    # - name: Checkout GitOps repository
-    #   uses: actions/checkout@v3
-    #   with:
-    #     repository: ysheep0906/gitops
-    #     ssh-key: ${{ secrets.GITOPS_REPO_SSH_KEY }}
-    #     path: gitops
+    # 6. Checkout GitOps repo
+    - name: Checkout GitOps repository
+      uses: actions/checkout@v3
+      with:
+        repository: ysheep0906/facticle-gitops
+        ssh-key: ${{ secrets.GITOPS_REPO_SSH_KEY }}
 
-    # # 7. Update Helm values.yaml tag
-    # - name: Update image tag in GitOps repo
-    #   run: |
-    #     sed -i "s/tag:.*/tag: \"${GITHUB_SHA}\"/" gitops/helm/${{ github.event.repository.name }}/values.yaml
+    # 7. Update Helm values.yaml tag
+    - name: Update image tag in GitOps repo
+      run: |
+        sed -i "s/tag:.*/tag: \"${GITHUB_SHA}\"/" helm/${{ github.event.repository.name }}/values.yaml
 
-    # # 8. Commit and Push to GitOps repo
-    # - name: Commit & Push changes
-    #   run: |
-    #     cd gitops
-    #     git config user.name "CI Bot"
-    #     git config user.email "ci@example.com"
-    #     git add .
-    #     git commit -m "Update image tag for ${{ github.event.repository.name }} to ${GITHUB_SHA}"
-    #     git push
+    # 8. Commit and Push to GitOps repo
+    - name: Commit & Push changes
+      run: |
+        git config user.name "CI Bot"
+        git config user.email "ci@example.com"
+        git add .
+        git commit -m "Update image tag for ${{ github.event.repository.name }} to ${GITHUB_SHA}"
+        git push
