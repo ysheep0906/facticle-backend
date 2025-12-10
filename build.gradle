@@ -38,6 +38,9 @@ dependencies {
 
 	//elasticsearch 연동을 위한 라이브러리
 	implementation 'org.springframework.boot:spring-boot-starter-data-elasticsearch'
+	implementation("org.opensearch.client:opensearch-java:2.11.0")
+	implementation("org.opensearch.client:opensearch-rest-client:2.11.0")
+
 
 	//Querydsl 추가
 	implementation 'com.querydsl:querydsl-jpa:5.0.0:jakarta'
