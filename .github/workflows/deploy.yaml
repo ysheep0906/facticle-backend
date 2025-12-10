@@ -29,11 +29,15 @@ jobs:
     # 4. Build Docker Image
     - name: Build Docker image
       run: |
-        docker build -t ${{ secrets.AWS_ECR_REGISTRY }}/${{ github.event.repository.name }}:latest .
+        docker build -t ${{ secrets.AWS_ECR_REGISTRY }}/${{ github.event.repository.name }}:${GITHUB_SHA} .
+        docker tag  ${{ secrets.AWS_ECR_REGISTRY }}/${{ github.event.repository.name }}:${GITHUB_SHA} \
+                    ${{ secrets.AWS_ECR_REGISTRY }}/${{ github.event.repository.name }}:latest
+
 
     # 5. Push Docker Image
     - name: Push image to ECR
       run: |
+        docker push ${{ secrets.AWS_ECR_REGISTRY }}/${{ github.event.repository.name }}:${GITHUB_SHA}
         docker push ${{ secrets.AWS_ECR_REGISTRY }}/${{ github.event.repository.name }}:latest
 
     # 6. Checkout GitOps repo
