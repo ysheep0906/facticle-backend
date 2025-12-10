@@ -1,16 +1,17 @@
 package com.example.facticle.news.repository.elasticsearch;
 
+import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.MatchPhraseQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.Query;
+import co.elastic.clients.elasticsearch.core.SearchRequest;
+import co.elastic.clients.elasticsearch.core.SearchResponse;
 import com.example.facticle.news.entity.NewsDocument;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.elasticsearch.index.query.BoolQueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
-import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
-import org.springframework.data.elasticsearch.core.SearchHit;
-import org.springframework.data.elasticsearch.core.query.NativeSearchQuery;
-import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
 import org.springframework.stereotype.Repository;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -20,68 +21,69 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class NewsDocumentRepositoryCustomImpl implements NewsDocumentRepositoryCustom {
 
-    // ✅ Spring Data Elasticsearch 정석
-    private final ElasticsearchOperations elasticsearchOperations;
+    private final ElasticsearchClient elasticsearchClient;
 
     @Override
     public List<Long> searchByTitle(List<String> keywords) {
 
-        BoolQueryBuilder boolQuery = QueryBuilders.boolQuery();
-        keywords.forEach(k ->
-                boolQuery.must(QueryBuilders.matchPhraseQuery("title", k))
-        );
+        List<Query> mustQueries = keywords.stream()
+                .map(k -> Query.of(q -> q.matchPhrase(
+                        MatchPhraseQuery.of(m -> m.field("title").query(k))
+                )))
+                .toList();
 
-        NativeSearchQuery query = new NativeSearchQueryBuilder()
-                .withQuery(boolQuery)
-                .build();
-
-        return execute(query);
+        return executeSearch(mustQueries);
     }
 
     @Override
     public List<Long> searchByContent(List<String> keywords) {
 
-        BoolQueryBuilder boolQuery = QueryBuilders.boolQuery();
-        keywords.forEach(k ->
-                boolQuery.must(QueryBuilders.matchPhraseQuery("content", k))
-        );
+        List<Query> mustQueries = keywords.stream()
+                .map(k -> Query.of(q -> q.matchPhrase(
+                        MatchPhraseQuery.of(m -> m.field("content").query(k))
+                )))
+                .toList();
 
-        NativeSearchQuery query = new NativeSearchQueryBuilder()
-                .withQuery(boolQuery)
-                .build();
-
-        return execute(query);
+        return executeSearch(mustQueries);
     }
 
     @Override
     public List<Long> searchByTitleOrContent(List<String> keywords) {
 
-        BoolQueryBuilder outerBool = QueryBuilders.boolQuery();
+        List<Query> mustQueries = keywords.stream()
+                .map(k -> Query.of(q -> q.bool(
+                        BoolQuery.of(b -> b
+                                .should(Query.of(s -> s.matchPhrase(
+                                        MatchPhraseQuery.of(m -> m.field("title").query(k))
+                                )))
+                                .should(Query.of(s -> s.matchPhrase(
+                                        MatchPhraseQuery.of(m -> m.field("content").query(k))
+                                )))
+                        )
+                )))
+                .toList();
 
-        keywords.forEach(k -> {
-            BoolQueryBuilder innerBool = QueryBuilders.boolQuery()
-                    .should(QueryBuilders.matchPhraseQuery("title", k))
-                    .should(QueryBuilders.matchPhraseQuery("content", k));
-
-            outerBool.must(innerBool);
-        });
-
-        NativeSearchQuery query = new NativeSearchQueryBuilder()
-                .withQuery(outerBool)
-                .build();
-
-        return execute(query);
+        return executeSearch(mustQueries);
     }
 
-    private List<Long> execute(NativeSearchQuery query) {
+    private List<Long> executeSearch(List<Query> mustQueries) {
+        try {
+            SearchRequest searchRequest = new SearchRequest.Builder()
+                    .index("news_index")
+                    .query(q -> q.bool(b -> b.must(mustQueries)))
+                    .build();
 
-        return elasticsearchOperations
-                .search(query, NewsDocument.class)
-                .stream()
-                .map(SearchHit::getId)
-                .map(this::convertToLong)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
+            SearchResponse<NewsDocument> response =
+                    elasticsearchClient.search(searchRequest, NewsDocument.class);
+
+            return response.hits().hits().stream()
+                    .map(hit -> convertToLong(hit.id()))
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+
+        } catch (IOException e) {
+            throw new RuntimeException("OpenSearch 검색 오류", e);
+        }
     }
 
     private Long convertToLong(String newsId) {
