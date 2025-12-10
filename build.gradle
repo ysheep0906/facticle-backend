@@ -40,6 +40,9 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-data-elasticsearch'
 	implementation("org.opensearch.client:opensearch-java:2.11.0")
 	implementation("org.opensearch.client:opensearch-rest-client:2.11.0")
+	implementation("software.amazon.awssdk:auth")
+    implementation("software.amazon.awssdk:regions")
+    implementation("software.amazon.awssdk:apache-client")
 
 
 	//Querydsl 추가
