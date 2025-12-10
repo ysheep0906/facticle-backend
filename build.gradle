@@ -36,13 +36,20 @@ dependencies {
 	//aws s3 연동을 위한 라이브러리
 	implementation 'software.amazon.awssdk:s3:2.25.39'
 
-	//elasticsearch 연동을 위한 라이브러리
-	implementation 'org.springframework.boot:spring-boot-starter-data-elasticsearch'
-	implementation("org.opensearch.client:opensearch-java:2.11.0")
-	implementation("org.opensearch.client:opensearch-rest-client:2.11.0")
-	implementation("software.amazon.awssdk:auth")
-    implementation("software.amazon.awssdk:regions")
-    implementation("software.amazon.awssdk:apache-client")
+	// ✅ Spring Elasticsearch
+    implementation 'org.springframework.boot:spring-boot-starter-data-elasticsearch'
+
+    // ✅ OpenSearch Client
+    implementation "org.opensearch.client:opensearch-java:2.11.0"
+    implementation "org.opensearch.client:opensearch-rest-client:2.11.0"
+
+    // ✅ AWS SDK BOM (이거 하나로 전부 해결)
+    implementation platform("software.amazon.awssdk:bom:2.25.18")
+
+    // ✅ AWS SDK Modules
+    implementation "software.amazon.awssdk:auth"
+    implementation "software.amazon.awssdk:regions"
+    implementation "software.amazon.awssdk:apache-client"
 
 
 	//Querydsl 추가
