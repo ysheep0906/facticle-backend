@@ -11,7 +11,7 @@ spring:
   jpa:
     database-platform: org.hibernate.dialect.MySQLDialect
     hibernate:
-      ddl-auto: update # 운영환경에서는 절대 create 아님
+      ddl-auto: create # 운영환경에서는 절대 create 아님
     properties:
       hibernate:
         jdbc.time_zone: UTC
