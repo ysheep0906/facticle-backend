@@ -1,6 +1,6 @@
 package com.example.facticle.news.repository.elasticsearch;
 
-import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import org.opensearch.client.opensearch.OpenSearchClient;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import co.elastic.clients.elasticsearch.core.SearchRequest;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class NewsDocumentRepositoryCustomImpl implements NewsDocumentRepositoryCustom{
 
-    private final ElasticsearchClient elasticsearchClient;
+    private final OpenSearchClient openSearchClient;
 
     @Override
     public List<Long> searchByTitle(List<String> keywords) {
@@ -36,7 +36,7 @@ public class NewsDocumentRepositoryCustomImpl implements NewsDocumentRepositoryC
                     .query(q -> q.bool(b -> b.must(mustQueries))) // 모든 키워드를 포함하는 must 조건 적용
                     .build();
 
-            SearchResponse<NewsDocument> response = elasticsearchClient.search(searchRequest, NewsDocument.class);
+            SearchResponse<NewsDocument> response = openSearchClient.search(searchRequest, NewsDocument.class);
 
             log.info("response {}", response);
 
@@ -69,7 +69,7 @@ public class NewsDocumentRepositoryCustomImpl implements NewsDocumentRepositoryC
                     .query(q -> q.bool(b -> b.must(mustQueries))) // 모든 키워드를 포함하는 must 조건 적용
                     .build();
 
-            SearchResponse<NewsDocument> response = elasticsearchClient.search(searchRequest, NewsDocument.class);
+            SearchResponse<NewsDocument> response = openSearchClient.search(searchRequest, NewsDocument.class);
 
             log.info("response {}", response);
 
@@ -107,7 +107,7 @@ public class NewsDocumentRepositoryCustomImpl implements NewsDocumentRepositoryC
                     .query(q -> q.bool(b -> b.must(mustQueries)))
                     .build();
 
-            SearchResponse<NewsDocument> response = elasticsearchClient.search(searchRequest, NewsDocument.class);
+            SearchResponse<NewsDocument> response = openSearchClient.search(searchRequest, NewsDocument.class);
 
             log.info("response {}", response);
 
