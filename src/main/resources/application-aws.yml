@@ -2,6 +2,10 @@ spring:
   config:
     activate:
       on-profile: aws
+  data:
+    elasticsearch:
+      repositories:
+        enabled: false
 
   datasource:
     url: jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}?serverTimezone=UTC&characterEncoding=UTF-8
