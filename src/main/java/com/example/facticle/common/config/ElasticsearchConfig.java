@@ -16,8 +16,8 @@ public class ElasticsearchConfig extends ElasticsearchConfiguration {
     @Override
     public ClientConfiguration clientConfiguration() {
         return ClientConfiguration.builder()
-                .connectedTo(esHost.replace("https://", "") + ":443") // ✅ 443 강제
-                .usingSsl()                                          // ✅ HTTPS 필수
+                .connectedTo(esHost.replace("https://", "") + ":443")
+                .usingSsl()
                 .build();
     }
 }
