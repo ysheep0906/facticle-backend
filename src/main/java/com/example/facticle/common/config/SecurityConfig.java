@@ -113,7 +113,9 @@ public class SecurityConfig {
                 "https://localhost:3000",
                 "https://frontend:3000",
                 "http://4.217.216.120",
-                "https://4.217.216.120"
+                "https://4.217.216.120",
+                "http://k8s-facticle-facticle-7841da9a31-1656826379.ap-northeast-2.elb.amazonaws.com",
+                "https://k8s-facticle-facticle-7841da9a31-1656826379.ap-northeast-2.elb.amazonaws.com"
                 )); // 허용할 프론트엔드 도메인
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")); // 허용할 메서드
         configuration.setAllowedHeaders(List.of("*")); //프론트엔드에서 요청을 보낼 때 포함할 수 있는 헤더
