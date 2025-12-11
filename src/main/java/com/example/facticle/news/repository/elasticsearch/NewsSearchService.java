@@ -60,14 +60,8 @@ public class NewsSearchService {
             SearchResponse response =
                     openSearchClient.search(request, RequestOptions.DEFAULT);
 
-            return response.getHits().getHits().stream()
-                    .map(hit -> {
-                        try {
-                            return Long.parseLong(hit.getId());
-                        } catch (Exception e) {
-                            return null;
-                        }
-                    })
+            return Arrays.stream(response.getHits().getHits())
+                    .map(hit -> convertToLong(hit.getId()))
                     .filter(id -> id != null)
                     .collect(Collectors.toList());
 
@@ -75,6 +69,7 @@ public class NewsSearchService {
             throw new RuntimeException("OpenSearch 검색 실패", e);
         }
     }
+
     
     private Long convertToLong(String newsId) {
         try {
