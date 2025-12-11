@@ -38,6 +38,10 @@ cloud:
     s3:
       bucket: ${AWS_BUCKET_NAME}
 
+app:
+  s3:
+    default-profile: ${S3_DEFAULT_PROFILE}
+
 opensearch:
   endpoint: ${OPENSEARCH_ENDPOINT}
 
