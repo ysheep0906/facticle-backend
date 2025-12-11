@@ -68,6 +68,7 @@ public class SecurityConfig {
                             "/api/users/token/refresh",
                             "/api/news/search",
                             "/api/news/{newsId}",
+                            "/health",
                             "/static/**",
                             "/favicon.ico"
                     ).permitAll()
