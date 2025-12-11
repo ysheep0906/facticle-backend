@@ -52,7 +52,7 @@ public class UserService {
 
     //S3 연동
     private final S3Client s3Client;
-    @Value("${aws.s3.bucket}")
+    @Value("${cloud.aws.s3.bucket}")
     private String bucketName;
 
     @Value("${app.s3.default-profile}")
