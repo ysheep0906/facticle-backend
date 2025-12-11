@@ -37,11 +37,7 @@ dependencies {
 	implementation 'software.amazon.awssdk:s3:2.25.39'
 
 	// ✅ Spring Elasticsearch
-    implementation 'org.springframework.boot:spring-boot-starter-data-elasticsearch'
-	implementation 'co.elastic.clients:elasticsearch-java:8.15.5'
-	implementation 'org.elasticsearch.client:elasticsearch-rest-client:8.15.5'
-
-
+    implementation 'org.opensearch.client:opensearch-rest-high-level-client:2.11.0'
 
     // ✅ AWS SDK BOM (이거 하나로 전부 해결)
     implementation platform("software.amazon.awssdk:bom:2.25.18")

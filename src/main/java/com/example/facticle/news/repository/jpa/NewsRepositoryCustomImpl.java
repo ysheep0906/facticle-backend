@@ -5,7 +5,7 @@ import com.example.facticle.news.dto.SortBy;
 import com.example.facticle.news.dto.SortDirection;
 import com.example.facticle.news.entity.News;
 import com.example.facticle.news.entity.NewsCategory;
-import com.example.facticle.news.repository.elasticsearch.NewsDocumentRepository;
+import com.example.facticle.news.search.NewsSearchService; // ✅ 변경된 import
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.NumberExpression;
@@ -24,10 +24,13 @@ import static com.example.facticle.news.entity.QNews.news;
 @Slf4j
 @Repository
 @RequiredArgsConstructor
-public class NewsRepositoryCustomImpl implements NewsRepositoryCustom{
+public class NewsRepositoryCustomImpl implements NewsRepositoryCustom {
 
     private final JPAQueryFactory jpaQueryFactory;
-    private final NewsDocumentRepository newsDocumentRepository;
+
+    // ❌ private final NewsDocumentRepository newsDocumentRepository;
+    // ✅ OpenSearch 전용 서비스로 교체
+    private final NewsSearchService newsSearchService;
 
     @Override
     public List<News> searchNewsList(NewsSearchCondition condition) {
@@ -57,16 +60,16 @@ public class NewsRepositoryCustomImpl implements NewsRepositoryCustom{
     }
 
     /**
-     * 추후 ElasticSearch 적용 시 검색된 뉴스 ID 리스트를 받아서 필터링할 예정
+     * ✅ OpenSearch 검색 결과 ID 기반 필터링
      */
     private BooleanExpression titleKeywordIn(List<String> titleKeyword) {
         log.info("titleKeyword {}", titleKeyword);
         if (titleKeyword == null || titleKeyword.isEmpty()) {
             return null;
         }
-        List<Long> newsIds = newsDocumentRepository.searchByTitle(titleKeyword);
 
-        return (newsIds != null) ? news.newsId.in(newsIds) : null;
+        List<Long> newsIds = newsSearchService.searchByTitle(titleKeyword);
+        return (newsIds != null && !newsIds.isEmpty()) ? news.newsId.in(newsIds) : null;
     }
 
     private BooleanExpression contentKeywordIn(List<String> contentKeyword) {
@@ -74,9 +77,9 @@ public class NewsRepositoryCustomImpl implements NewsRepositoryCustom{
         if (contentKeyword == null || contentKeyword.isEmpty()) {
             return null;
         }
-        List<Long> newsIds = newsDocumentRepository.searchByContent(contentKeyword);
 
-        return (newsIds != null) ? news.newsId.in(newsIds) : null;
+        List<Long> newsIds = newsSearchService.searchByContent(contentKeyword);
+        return (newsIds != null && !newsIds.isEmpty()) ? news.newsId.in(newsIds) : null;
     }
 
     private BooleanExpression titleOrContentKeywordIn(List<String> titleOrContentKeyword) {
@@ -85,23 +88,20 @@ public class NewsRepositoryCustomImpl implements NewsRepositoryCustom{
             return null;
         }
 
-        List<Long> newsIds = newsDocumentRepository.searchByTitleOrContent(titleOrContentKeyword);
-
-        return (newsIds != null) ? news.newsId.in(newsIds) : null;
+        List<Long> newsIds = newsSearchService.searchByTitleOrContent(titleOrContentKeyword);
+        return (newsIds != null && !newsIds.isEmpty()) ? news.newsId.in(newsIds) : null;
     }
 
+    // ======================= 이하 QueryDSL 부분은 ✅ 기존 그대로 유지 =======================
 
-    // 언론사 포함 조건
     private BooleanExpression publishersIn(List<String> publishers){
         return (publishers != null && !publishers.isEmpty()) ? news.mediaName.in(publishers) : null;
     }
 
-    // 카테고리 포함 조건
     private BooleanExpression categoriesIn(List<NewsCategory> categories){
         return (categories != null && !categories.isEmpty()) ? news.category.in(categories) : null;
     }
 
-    // 시간 범위 조건
     private BooleanExpression collectedAtBetween(LocalDateTime startDate, LocalDateTime endDate){
         if(startDate != null && endDate != null){
             return news.collectedAt.between(startDate, endDate);
@@ -113,14 +113,9 @@ public class NewsRepositoryCustomImpl implements NewsRepositoryCustom{
         return null;
     }
 
-    // hs 점수 조건
     private BooleanExpression headlineScoreBetween(BigDecimal minHsScore, BigDecimal maxHsScore){
-        if (minHsScore != null) {
-            minHsScore = minHsScore.setScale(2, RoundingMode.HALF_UP);
-        }
-        if (maxHsScore != null) {
-            maxHsScore = maxHsScore.setScale(2, RoundingMode.HALF_UP);
-        }
+        if (minHsScore != null) minHsScore = minHsScore.setScale(2, RoundingMode.HALF_UP);
+        if (maxHsScore != null) maxHsScore = maxHsScore.setScale(2, RoundingMode.HALF_UP);
 
         if (minHsScore != null && maxHsScore != null) {
             return news.headlineScore.between(minHsScore, maxHsScore);
@@ -132,14 +127,9 @@ public class NewsRepositoryCustomImpl implements NewsRepositoryCustom{
         return null;
     }
 
-    // fs 점수 조건
     private BooleanExpression factScoreBetween(BigDecimal minFsScore, BigDecimal maxFsScore) {
-        if (minFsScore != null) {
-            minFsScore = minFsScore.setScale(2, RoundingMode.HALF_UP);
-        }
-        if (maxFsScore != null) {
-            maxFsScore = maxFsScore.setScale(2, RoundingMode.HALF_UP);
-        }
+        if (minFsScore != null) minFsScore = minFsScore.setScale(2, RoundingMode.HALF_UP);
+        if (maxFsScore != null) maxFsScore = maxFsScore.setScale(2, RoundingMode.HALF_UP);
 
         if (minFsScore != null && maxFsScore != null) {
             return news.factScore.between(minFsScore, maxFsScore);
@@ -151,7 +141,6 @@ public class NewsRepositoryCustomImpl implements NewsRepositoryCustom{
         return null;
     }
 
-    // 좋아요 수 범위 조건
     private BooleanExpression likesBetween(Integer minLikes, Integer maxLikes) {
         if (minLikes != null && maxLikes != null) {
             return news.likeCount.between(minLikes, maxLikes);
@@ -163,7 +152,6 @@ public class NewsRepositoryCustomImpl implements NewsRepositoryCustom{
         return null;
     }
 
-    // 싫어요 수 범위 조건
     private BooleanExpression dislikesBetween(Integer minDislikes, Integer maxDislikes) {
         if (minDislikes != null && maxDislikes != null) {
             return news.hateCount.between(minDislikes, maxDislikes);
@@ -175,7 +163,6 @@ public class NewsRepositoryCustomImpl implements NewsRepositoryCustom{
         return null;
     }
 
-    // 댓글 숫 범위 조건
     private BooleanExpression commentsBetween(Integer minComments, Integer maxComments) {
         if (minComments != null && maxComments != null) {
             return news.commentCount.between(minComments, maxComments);
@@ -187,7 +174,6 @@ public class NewsRepositoryCustomImpl implements NewsRepositoryCustom{
         return null;
     }
 
-    // 조회 수 범위 조건
     private BooleanExpression viewsBetween(Integer minViews, Integer maxViews) {
         if (minViews != null && maxViews != null) {
             return news.viewCount.between(minViews, maxViews);
@@ -199,7 +185,6 @@ public class NewsRepositoryCustomImpl implements NewsRepositoryCustom{
         return null;
     }
 
-    // 별점 평가 수 범위 조건
     private BooleanExpression ratingCountBetween(Integer minRatingCount, Integer maxRatingCount) {
         if (minRatingCount != null && maxRatingCount != null) {
             return news.ratingCount.between(minRatingCount, maxRatingCount);
@@ -211,14 +196,9 @@ public class NewsRepositoryCustomImpl implements NewsRepositoryCustom{
         return null;
     }
 
-    // 별점 범위 조건
     private BooleanExpression ratingBetween(BigDecimal minRating, BigDecimal maxRating) {
-        if (minRating != null) {
-            minRating = minRating.setScale(1, RoundingMode.HALF_UP);
-        }
-        if (maxRating != null) {
-            maxRating = maxRating.setScale(1, RoundingMode.HALF_UP);
-        }
+        if (minRating != null) minRating = minRating.setScale(1, RoundingMode.HALF_UP);
+        if (maxRating != null) maxRating = maxRating.setScale(1, RoundingMode.HALF_UP);
 
         NumberExpression<BigDecimal> averageRating =
                 news.totalRatingSum.divide(news.ratingCount.castToNum(BigDecimal.class));
