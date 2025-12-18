@@ -68,6 +68,14 @@ public class UserService {
         ).toExternalForm();
     }
 
+    private String generateImageUrl(String key) {
+        return s3Client.utilities().getUrl(b -> b
+            .bucket(bucketName)
+            .key(key)
+        ).toExternalForm();
+    }
+
+
     public Long saveUser(LocalSignupRequestDto localSignupRequestDto){
         checkLocalSignupDto(localSignupRequestDto);
 
