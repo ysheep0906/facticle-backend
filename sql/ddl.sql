@@ -10,6 +10,8 @@ CREATE TABLE users (
     nickname VARCHAR(255) NOT NULL UNIQUE,
     hashed_password VARCHAR(100),
     profile_image VARCHAR(255),
+    profile_image_key VARCHAR(255),
+    profile_image_url VARCHAR(255),
     social_provider VARCHAR(30),
     social_id VARCHAR(255),
     role ENUM('ADMIN', 'USER') NOT NULL,
