@@ -45,8 +45,11 @@ public class User {
     @Column(unique = true)
     private String email;
 
-    @Builder.Default
-    private String profileImage = "https://facticlestorage.blob.core.windows.net/profile-images/default.png"; //azure 기본 이미지
+    @Column(name = "profile_image_key", nullable = false)
+    private String profileImageKey;
+
+    @Column(name = "profile_image_url", nullable = false)
+    private String profileImageUrl;
 
     @Enumerated(EnumType.STRING)
     @Column(length = 20, nullable = false)
@@ -129,8 +132,9 @@ public class User {
     public void updateLastLogin(LocalDateTime time){
         this.lastLogin = time;
     }
-    public void updateProfileImage(String filepath){
-        this.profileImage = filepath;
+    public void updateProfileImage(String key, String url) {
+        this.profileImageKey = key;
+        this.profileImageUrl = url;
     }
     public void updateNickname(String nickname){
         this.nickname = nickname;
