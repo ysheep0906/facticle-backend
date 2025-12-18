@@ -34,7 +34,7 @@ public class GetProfileResponseDto {
                 .socialId(user.getSignupType() == SignupType.SOCIAL ? user.getSocialAuth().getSocialId() : null)
                 .socialProvider(user.getSignupType() == SignupType.SOCIAL ? user.getSocialAuth().getSocialProvider() : null)
                 .email(user.getEmail())
-                .profileImage(user.getProfileImage())
+                .profileImage(user.getProfileImageUrl())
                 .role(user.getRole())
                 .signupType(user.getSignupType())
                 .createdAt(DateTimeUtil.convertUTCToKST(user.getCreatedAt()))

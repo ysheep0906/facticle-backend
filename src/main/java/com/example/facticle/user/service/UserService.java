@@ -315,7 +315,7 @@ public class UserService {
     public String getProfileImage(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-        return user.getProfileImage();
+        return user.getProfileImageUrl();
     }
 
     /**
