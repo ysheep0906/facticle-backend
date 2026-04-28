@@ -55,11 +55,18 @@ public class UserService {
     @Value("${cloud.aws.s3.bucket}")
     private String bucketName;
 
-    @Value("${app.s3.default-profile}")
-    private String defaultProfileImageUrl;
+    @Value("${app.s3.default-profile-key}")
+    private String defaultProfileImageKey;
 
     private static final List<String> ALLOWED_FILE_TYPES = List.of("image/jpeg", "image/png");
     private static final long MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB 제한
+
+    private String getDefaultProfileImageUrl() { // S3에서 기본 프로필 이미지 URL 생성
+        return s3Client.utilities().getUrl(b -> b
+            .bucket(bucketName)
+            .key(defaultProfileImageKey)
+        ).toExternalForm();
+    }
 
     public Long saveUser(LocalSignupRequestDto localSignupRequestDto){
         checkLocalSignupDto(localSignupRequestDto);
@@ -253,7 +260,7 @@ public class UserService {
      */
     public String uploadProfileImage(Long userId, MultipartFile profileImage) {
 
-    // Validation
+    // Validation (좋음 👍)
     if (profileImage == null || profileImage.isEmpty()) {
         throw new InvalidInputException("Invalid input", Map.of("profile_image", "profileImage is empty"));
     }
@@ -265,41 +272,34 @@ public class UserService {
     }
 
     User user = userRepository.findById(userId)
-            .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
-    // 이전 이미지 삭제
-    if (user.getProfileImage() != null && !user.getProfileImage().equals(defaultProfileImageUrl)) {
-        String oldFileName = user.getProfileImage()
-                .substring(user.getProfileImage().lastIndexOf("/") + 1);
-
+    // 🔥 이전 이미지 삭제 (key 기준)
+    if (user.getProfileImageKey() != null && !user.getProfileImageKey().equals(defaultProfileImageKey)) {
         s3Client.deleteObject(DeleteObjectRequest.builder()
-                .bucket(bucketName)
-                .key(oldFileName)
-                .build());
+            .bucket(bucketName)
+            .key(user.getProfileImageKey())
+            .build());
     }
 
-    // 새 파일 이름 생성
-    String extension = "";
-    int idx = profileImage.getOriginalFilename().lastIndexOf(".");
-    if (idx != -1) {
-        extension = profileImage.getOriginalFilename().substring(idx);
-    }
-    String newFileName = UUID.randomUUID() + "_" + userId + extension;
+    // 새 key 생성
+    String extension = profileImage.getOriginalFilename()
+        .substring(profileImage.getOriginalFilename().lastIndexOf("."));
+    String newKey = "profiles/" + userId + "/" + UUID.randomUUID() + extension;
 
-    // S3 업로드
     try {
         s3Client.putObject(
-                PutObjectRequest.builder()
-                        .bucket(bucketName)
-                        .key(newFileName)
-                        .contentType(profileImage.getContentType())
-                        .build(),
-                RequestBody.fromInputStream(profileImage.getInputStream(), profileImage.getSize())
+            PutObjectRequest.builder()
+                .bucket(bucketName)
+                .key(newKey)
+                .contentType(profileImage.getContentType())
+                .build(),
+            RequestBody.fromInputStream(profileImage.getInputStream(), profileImage.getSize())
         );
 
-        String imageUrl = "https://" + bucketName + ".s3.ap-northeast-2.amazonaws.com/" + newFileName;
+        String imageUrl = generateImageUrl(newKey);
 
-        user.updateProfileImage(imageUrl);
+        user.updateProfileImage(newKey, imageUrl);
 
         return imageUrl;
 
@@ -307,6 +307,7 @@ public class UserService {
         throw new RuntimeException("Failed to upload image", e);
     }
 }
+
 
     /**
      * 프로필 이미지 조회
@@ -322,22 +323,20 @@ public class UserService {
      */
     public String deleteProfileImage(Long userId) {
     User user = userRepository.findById(userId)
-            .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
-    String currentImage = user.getProfileImage();
-
-    if (currentImage != null && !currentImage.equals(defaultProfileImageUrl)) {
-        String oldFileName = currentImage.substring(currentImage.lastIndexOf("/") + 1);
+    if (user.getProfileImageKey() != null &&
+        !user.getProfileImageKey().equals(defaultProfileImageKey)) {
 
         s3Client.deleteObject(DeleteObjectRequest.builder()
-                .bucket(bucketName)
-                .key(oldFileName)
-                .build());
+            .bucket(bucketName)
+            .key(user.getProfileImageKey())
+            .build());
     }
 
-    user.updateProfileImage(defaultProfileImageUrl);
+    user.updateProfileImage(defaultProfileImageKey, generateImageUrl(defaultProfileImageKey));
 
-    return defaultProfileImageUrl;
+    return user.getProfileImageUrl();
 }
 
     /**

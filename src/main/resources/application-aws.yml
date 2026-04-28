@@ -31,16 +31,12 @@ jwt:
   refresh-token-valid-time: 3600000
 
 cloud:
-  aws:
-    credentials:
-      access-key: ${AWS_ACCESS_KEY}
-      secret-key: ${AWS_SECRET_KEY}
     s3:
       bucket: ${AWS_BUCKET_NAME}
 
 app:
   s3:
-    default-profile: ${S3_DEFAULT_PROFILE}
+    default-profile-key: ${S3_DEFAULT_PROFILE}
 
 opensearch:
   endpoint: ${OPENSEARCH_ENDPOINT}
