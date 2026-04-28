@@ -68,6 +68,14 @@ public class UserService {
         ).toExternalForm();
     }
 
+    private String generateImageUrl(String key) {
+        return s3Client.utilities().getUrl(b -> b
+            .bucket(bucketName)
+            .key(key)
+        ).toExternalForm();
+    }
+
+
     public Long saveUser(LocalSignupRequestDto localSignupRequestDto){
         checkLocalSignupDto(localSignupRequestDto);
 
@@ -315,7 +323,7 @@ public class UserService {
     public String getProfileImage(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-        return user.getProfileImage();
+        return user.getProfileImageUrl();
     }
 
     /**

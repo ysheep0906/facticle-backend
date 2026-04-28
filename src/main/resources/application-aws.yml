@@ -31,6 +31,7 @@ jwt:
   refresh-token-valid-time: 3600000
 
 cloud:
+  aws:
     s3:
       bucket: ${AWS_BUCKET_NAME}
 

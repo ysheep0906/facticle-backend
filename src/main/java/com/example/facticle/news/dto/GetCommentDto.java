@@ -36,7 +36,7 @@ public class GetCommentDto {
                 .userId(comment.getUser().getUserId())
                 .newsId(comment.getNews().getNewsId())
                 .nickname(comment.getUser().getNickname())
-                .profileImage(comment.getUser().getProfileImage())
+                .profileImage(comment.getUser().getProfileImageUrl())
                 .content(comment.getContent())
                 .likeCount(comment.getLikeCount())
                 .hateCount(comment.getHateCount())
